@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doctor Dashboard | SVM Hospital</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+ --primary:#00ffff;
+ --accent:#4b0082;
+ --bg:#0f0a1a;
+ --card:#1a1433;
+ --text:#f0f0ff;
+ --text-light:#b0a8ff;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{display:flex;min-height:100vh;background:var(--bg);color:var(--text);}
+
+.sidebar{
+ width:220px;background:var(--card);
+ display:flex;flex-direction:column;align-items:center;
+ padding-top:20px;position:sticky;top:0;
+}
+.sidebar header{text-align:center;margin-bottom:30px;}
+.sidebar img{width:60px;height:60px;border-radius:50%;border:2px solid var(--primary);}
+.sidebar h1{font-size:1.3rem;color:var(--primary);}
+
+.sidebar button,.sidebar a{
+ width:90%;background:none;border:none;color:var(--text-light);
+ padding:12px 15px;text-align:left;cursor:pointer;font-weight:600;
+ display:flex;gap:10px;border-radius:8px;transition:.3s;
+ text-decoration:none;font-size:1rem;
+}
+.sidebar button.active,.sidebar button:hover,.sidebar a:hover{
+ color:var(--primary);background:rgba(0,255,255,.1);
+}
+
+.logout{
+ margin-top:auto;
+ margin-bottom:20px;
+ color:#ff4d4d;
+}
+.logout:hover{
+ background:rgba(255,77,77,.15);
+}
+
+.main-content{flex:1;padding:25px;overflow-y:auto;}
+
+.center-title {
+  text-align: center;
+  font-size: 2rem;
+  color: #3eeaf7;
+  letter-spacing: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-shadow: 0 0 5px #11e4f3, 0 0 10px #1583eb, 0 0 20px #1835d8;
+}
+
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+h2{color:var(--primary);margin-bottom:15px;text-align:center;}
+
+table{width:100%;border-collapse:collapse;}
+th,td{border:1px solid var(--text-light);padding:8px;text-align:center;}
+th{background:var(--accent);color:#fff;}
+
+button.action{margin:4px;padding:4px 8px;border:none;border-radius:6px;cursor:pointer;}
+.approve{background:#00ff99;}
+.reject{background:#ff4d4d;}
+
+.modal{
+ display:none;position:fixed;inset:0;
+ background:rgba(0,0,0,.85);
+ align-items:center;justify-content:center;
+}
+.modal-content{
+ background:var(--card);padding:25px;
+ border-radius:15px;width:320px;text-align:center;
+}
+.modal-content input{
+ width:100%;padding:10px;margin:10px 0;border-radius:8px;
+ border:1px solid var(--text-light);background:#1a1433;color:#fff;
+}
+.modal-content button{
+ width:100%;padding:10px;border:none;border-radius:10px;
+ background:var(--primary);font-weight:600;cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+<header>
+<img src="svm hospital logo.png">
+<h1 id="sidebarName">Welcome, Doctor</h1>
+</header>
+
+<button class="tab-btn active" data-tab="appointments">
+<i class="fas fa-list"></i> My Appointments
+</button>
+
+<button class="tab-btn" data-tab="patients">
+<i class="fas fa-user-injured"></i> Patients
+</button>
+
+<a href="prescription.html">
+<i class="fas fa-file-medical"></i> Add Prescription
+</a>
+
+<button class="logout" onclick="logout()">
+<i class="fas fa-sign-out-alt"></i> Logout
+</button>
+</div>
+
+<!-- MAIN -->
+<div class="main-content">
+
+<div class="center-title">SVM HOSPITAL</div>
+
+<section id="appointments" class="tab-content active">
+<h2>My Appointments</h2>
+<table>
+<thead>
+<tr><th>Patient</th><th>Date</th><th>Time</th><th>Status</th></tr>
+</thead>
+<tbody id="appointmentList">
+<tr><td colspan="4">Loading...</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="patients" class="tab-content">
+<h2>Patients</h2>
+<table>
+<thead>
+<tr><th>Name</th><th>Email</th><th>Age</th><th>Gender</th><th>Height</th><th>Weight</th></tr>
+</thead>
+<tbody id="patientList">
+<tr><td colspan="6">Loading...</td></tr>
+</tbody>
+</table>
+</section>
+
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal" id="loginModal">
+<div class="modal-content">
+<h2>Doctor Login</h2>
+<input id="loginName" placeholder="Enter your name">
+<button onclick="loginDoctor()">Login</button>
+</div>
+</div>
+
+<script>
+const API="http://127.0.0.1:8000";
+
+/* TABS */
+document.querySelectorAll(".tab-btn").forEach(b=>{
+ b.onclick=()=>{
+  document.querySelectorAll(".tab-btn,.tab-content")
+  .forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  document.getElementById(b.dataset.tab).classList.add("active");
+ };
+});
+
+/* SESSION */
+let doctor=JSON.parse(localStorage.getItem("doctor"))||null;
+if(!doctor) document.getElementById("loginModal").style.display="flex";
+else init();
+
+function loginDoctor(){
+ const name=document.getElementById("loginName").value.trim();
+ if(!name) return alert("Enter name");
+ doctor={name};
+ localStorage.setItem("doctor",JSON.stringify(doctor));
+ document.getElementById("loginModal").style.display="none";
+ init();
+}
+
+function logout(){
+ localStorage.removeItem("doctor");
+ window.location.href="base.html";
+}
+
+function init(){
+ document.getElementById("sidebarName").innerText="Welcome, "+doctor.name;
+ loadAppointments();
+ loadPatients();
+}
+
+/* APPOINTMENTS */
+function loadAppointments(){
+ const list=document.getElementById("appointmentList");
+ list.innerHTML="<tr><td colspan='4'>Loading...</td></tr>";
+ fetch(`${API}/appointments?doctor=${encodeURIComponent(doctor.name)}`)
+ .then(r=>r.json())
+ .then(data=>{
+   if(!data.length){
+     list.innerHTML="<tr><td colspan='4'>No appointments</td></tr>";
+     return;
+   }
+   list.innerHTML="";
+   data.forEach(a=>{
+     list.innerHTML+=`
+     <tr>
+      <td>${a.patient||"-"}</td>
+      <td>${a.date||"-"}</td>
+      <td>${a.time||"-"}</td>
+      <td>
+        ${a.status}
+        ${a.status==="Pending"?`
+        <br>
+        <button class="action approve" onclick="updateStatus(${a.id},'Approved')">Approve</button>
+        <button class="action reject" onclick="updateStatus(${a.id},'Rejected')">Reject</button>
+        `:""}
+      </td>
+     </tr>`;
+   });
+ });
+}
+
+function updateStatus(id,status){
+ fetch(`${API}/appointments/${id}/status`,{
+   method:"PUT",
+   headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({status})
+ }).then(()=>loadAppointments());
+}
+
+/* PATIENTS */
+function loadPatients(){
+ const list=document.getElementById("patientList");
+ list.innerHTML="<tr><td colspan='6'>Loading...</td></tr>";
+ fetch(`${API}/appointments?doctor=${encodeURIComponent(doctor.name)}`)
+ .then(r=>r.json())
+ .then(apps=>{
+   let ids=[...new Set(apps.map(a=>a.patient_id))];
+   fetch(`${API}/patients`)
+   .then(r=>r.json())
+   .then(pats=>{
+     list.innerHTML="";
+     pats.filter(p=>ids.includes(p.id)).forEach(p=>{
+       list.innerHTML+=`
+       <tr>
+        <td>${p.name||"-"}</td>
+        <td>${p.email||"-"}</td>
+        <td>${p.age||"-"}</td>
+        <td>${p.gender||"-"}</td>
+        <td>${p.height||"-"}</td>
+        <td>${p.weight||"-"}</td>
+       </tr>`;
+     });
+     if(!list.innerHTML) list.innerHTML="<tr><td colspan='6'>No patients found</td></tr>";
+   });
+ });
+}
+</script>
+
+</body>
+</html>

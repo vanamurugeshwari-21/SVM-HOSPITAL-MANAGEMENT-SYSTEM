@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Patient Register</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+ --neon:#00ffff;
+ --violet:#7b5cff;
+}
+*{box-sizing:border-box}
+
+body{
+ margin:0;
+ font-family:Poppins;
+ background:radial-gradient(circle at top,#1b1245,#05020c);
+ min-height:100vh;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ color:white
+}
+
+/* 🔙 FIXED BACK BUTTON (TOP LEFT) */
+.back-btn{
+ position:fixed;
+ top:20px;
+ left:20px;
+ padding:10px 22px;
+ border-radius:30px;
+ border:1px solid var(--neon);
+ background:rgba(0,0,0,.35);
+ color:var(--neon);
+ font-size:14px;
+ font-weight:500;
+ cursor:pointer;
+ z-index:9999;
+ transition:.3s;
+ backdrop-filter:blur(6px)
+}
+.back-btn:hover{
+ background:var(--neon);
+ color:#000;
+ box-shadow:0 0 16px rgba(0,255,255,.9)
+}
+
+.card{
+ width:360px;
+ padding:28px 26px 26px;
+ background:linear-gradient(145deg,#160c38,#080313);
+ border-radius:18px;
+ box-shadow:0 0 30px rgba(0,255,255,.4),
+             inset 0 0 20px rgba(255,255,255,.05);
+ text-align:center
+}
+
+.logo{
+ width:90px;
+ display:block;
+ margin:0 auto 6px;
+ filter:drop-shadow(0 0 12px var(--neon))
+}
+
+h2{
+ margin:0 0 18px;
+ color:var(--neon);
+ font-weight:600;
+ text-shadow:0 0 8px rgba(0,255,255,.8)
+}
+
+input,select{
+ width:100%;
+ padding:12px;
+ margin:10px 0;
+ border-radius:10px;
+ background:#0b0617;
+ border:1px solid rgba(0,255,255,.45);
+ color:white;
+ outline:none
+}
+
+button.submit-btn{
+ width:100%;
+ padding:13px;
+ margin-top:16px;
+ border:none;
+ border-radius:30px;
+ background:linear-gradient(135deg,var(--neon),var(--violet));
+ font-weight:600;
+ cursor:pointer
+}
+
+.login{
+ margin-top:16px;
+ font-size:14px;
+ color:#b7b9ff
+}
+.login a{
+ color:var(--neon);
+ text-decoration:none
+}
+
+.message{
+ margin-top:10px;
+ font-size:14px;
+}
+.success{color:#00ffcc}
+.error{color:#ff4d4d}
+</style>
+</head>
+
+<body>
+
+<!-- 🔙 FRONT FIXED BACK BUTTON -->
+<button class="back-btn" onclick="goBack()">← Back</button>
+
+<div class="card">
+ <img src="svm hospital logo.png" class="logo">
+ <h2>Patient Register</h2>
+
+ <form id="regForm">
+  <input name="name" placeholder="Full Name" required>
+  <input name="email" type="email" placeholder="Email" required>
+  <input name="age" type="number" placeholder="Age" required>
+
+  <select name="gender" id="gender" required>
+   <option value="">Gender</option>
+   <option value="Male">Male</option>
+   <option value="Female">Female</option>
+   <option value="Other">Other</option>
+  </select>
+
+  <input name="gender_other" id="gender_other"
+         placeholder="Please specify gender"
+         style="display:none">
+
+  <input name="height" type="number" step="0.1" placeholder="Height (cm)">
+  <input name="weight" type="number" step="0.1" placeholder="Weight (kg)">
+
+  <button type="submit" class="submit-btn">Create Account</button>
+ </form>
+
+ <div id="msg" class="message"></div>
+
+ <div class="login">
+  Already have an account?
+  <a href="patient_login.html">Login</a>
+ </div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+function goBack(){
+ window.history.back();
+}
+
+const genderSelect = document.getElementById("gender");
+const otherInput = document.getElementById("gender_other");
+
+genderSelect.addEventListener("change",function(){
+ if(this.value==="Other"){
+  otherInput.style.display="block";
+  otherInput.required=true;
+ }else{
+  otherInput.style.display="none";
+  otherInput.required=false;
+  otherInput.value="";
+ }
+});
+
+document.getElementById("regForm").addEventListener("submit",function(e){
+ e.preventDefault();
+
+ let genderValue=this.gender.value;
+ if(genderValue==="Other"){
+  genderValue=this.gender_other.value.trim();
+ }
+
+ const patient={
+  name:this.name.value.trim(),
+  email:this.email.value.trim(),
+  age:this.age.value,
+  gender:genderValue,
+  height:this.height.value,
+  weight:this.weight.value
+ };
+
+ fetch(API+"/patients",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body:JSON.stringify(patient)
+ })
+ .then(r=>r.json().then(d=>({status:r.status,body:d})))
+ .then(res=>{
+  const msg=document.getElementById("msg");
+  if(res.status===201||res.body.status==="patient added"){
+   msg.textContent="✅ Patient registered successfully!";
+   msg.className="message success";
+   document.getElementById("regForm").reset();
+   otherInput.style.display="none";
+   setTimeout(()=>location.href="patient_login.html",1500);
+  }else{
+   msg.textContent="❌ Error: "+(res.body.message||"Patient with this email already exists");
+   msg.className="message error";
+  }
+ })
+ .catch(()=>{
+  const msg=document.getElementById("msg");
+  msg.textContent="Server error, try again.";
+  msg.className="message error";
+ });
+});
+</script>
+
+</body>
+</html>

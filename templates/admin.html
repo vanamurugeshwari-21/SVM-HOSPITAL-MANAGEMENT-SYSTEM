@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Dashboard | SVM Hospital</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+ --p:#00ffff;--a:#4b0082;--bg:#0f0a1a;
+ --c:#1a1433;--t:#f0f0ff;--l:#b0a8ff;
+ --g:0 0 15px rgba(0,255,255,.6)
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins}
+body{display:flex;color:var(--t);min-height:100vh;background:var(--bg)}
+
+/* SIDEBAR */
+.sidebar{width:240px;background:var(--c);min-height:100vh}
+.sidebar-header{text-align:center;padding:15px;border-bottom:1px solid var(--l)}
+.sidebar-header img{width:80px}
+.sidebar button{
+ width:100%;padding:14px;border:0;background:none;
+ color:var(--l);text-align:left;font-weight:600;cursor:pointer
+}
+.sidebar button.active,.sidebar button:hover{
+ color:var(--p);background:rgba(0,255,255,.1)
+}
+
+/* MAIN */
+.main{
+ flex:1;
+ padding:20px 20px 70px; /* space for back button */
+ background:linear-gradient(rgba(15,10,26,.85),rgba(15,10,26,.85)),
+ url("https://images.unsplash.com/photo-1586773860418-d37222d8fce3") center/cover fixed;
+ position:relative;
+}
+
+.tab{display:none}
+.tab.active{display:block}
+
+.cards{display:flex;gap:20px;flex-wrap:wrap;margin-top:15px}
+.card{
+ background:var(--c);padding:25px;border-radius:18px;
+ min-width:220px;text-align:center;box-shadow:var(--g)
+}
+.card h3{color:var(--p)}
+
+.doctors{
+ display:grid;
+ grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+ gap:25px;
+ margin-top:25px
+}
+.doctor{
+ background:linear-gradient(145deg,#1d1740,#120c2a);
+ padding:25px;border-radius:22px;text-align:center;
+ box-shadow:var(--g);transition:.3s
+}
+.doctor:hover{transform:translateY(-6px)}
+.doctor img{
+ width:130px;height:130px;border-radius:50%;
+ border:4px solid var(--p);object-fit:cover;margin-bottom:10px
+}
+.doctor h4{margin:8px 0}
+.doctor span{
+ display:inline-block;padding:5px 14px;border-radius:20px;
+ background:rgba(0,255,255,.15);color:var(--p);font-size:13px
+}
+
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid var(--l);padding:12px;text-align:center}
+th{background:var(--a)}
+table tr:nth-child(even){background:rgba(0,255,255,.05)}
+
+.loading{text-align:center;color:var(--l);padding:20px}
+.error{color:#ff6b6b;font-weight:600;text-align:center;padding:20px}
+.status-approved{color:#00ff99;font-weight:600;}
+.status-rejected{color:#ff4d4d;font-weight:600;}
+.status-pending{color:#ffff00;font-weight:600;}
+
+/* BACK BUTTON */
+.back-btn{
+ position:absolute;
+ right:20px;
+ bottom:20px;
+ padding:8px 22px;
+ border-radius:25px;
+ border:1px solid var(--p);
+ background:transparent;
+ color:var(--p);
+ font-size:14px;
+ cursor:pointer;
+ transition:.3s
+}
+.back-btn:hover{
+ background:var(--p);
+ color:#000;
+ box-shadow:0 0 15px rgba(0,255,255,.8)
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+ <div class="sidebar-header">
+  <img src="svm hospital logo.png">
+  <h3>SVM Admin</h3>
+  <p>Dashboard</p>
+ </div>
+ <button class="btn active" data-t="dash">Dashboard</button>
+ <button class="btn" data-t="patients">Patients</button>
+ <button class="btn" data-t="doc">Doctors</button>
+ <button class="btn" data-t="app">Appointments</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- DASH -->
+<div id="dash" class="tab active">
+ <h2>Admin Dashboard</h2>
+ <div class="cards">
+  <div class="card"><h3>Total Patients</h3><p id="tp">Loading...</p></div>
+  <div class="card"><h3>Total Doctors</h3><p id="td">0</p></div>
+  <div class="card"><h3>Total Appointments</h3><p id="ta">Loading...</p></div>
+ </div>
+</div>
+
+<!-- PATIENTS -->
+<div id="patients" class="tab">
+ <h2>Registered Patients</h2>
+ <div id="patientLoading" class="loading">Loading patients...</div>
+ <table id="patientTable" style="display:none;">
+  <tr>
+   <th>No</th><th>Name</th><th>Email</th><th>Gender</th>
+   <th>Age</th><th>Height</th><th>Weight</th>
+  </tr>
+  <tbody id="pl"></tbody>
+ </table>
+</div>
+
+<!-- DOCTORS -->
+<div id="doc" class="tab">
+ <h2>Our Specialist Doctors</h2>
+ <div class="doctors" id="dc"></div>
+</div>
+
+<!-- APPOINTMENTS -->
+<div id="app" class="tab">
+ <h2>All Appointments</h2>
+ <div id="appointmentLoading" class="loading">Loading appointments...</div>
+ <table id="appointmentTable" style="display:none;">
+  <tr>
+   <th>No</th><th>Patient</th><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th>
+  </tr>
+  <tbody id="al"></tbody>
+ </table>
+</div>
+
+<!-- BACK BUTTON -->
+<button class="back-btn" onclick="goBack()">← Back</button>
+
+</div>
+
+<script>
+const API="http://127.0.0.1:8000";
+
+/* TAB SWITCH */
+document.querySelectorAll(".btn").forEach(b=>{
+ b.onclick=()=>{
+  document.querySelectorAll(".btn").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  b.classList.add("active");
+  document.getElementById(b.dataset.t).classList.add("active");
+ }
+});
+
+/* DOCTORS */
+const doctors=[
+ {name:"Dr. John Anderson",spec:"Cardiology",img:"img1.jpg"},
+ {name:"Dr. Emma Wilson",spec:"Neurology",img:"img2.jpg"},
+ {name:"Dr. Michael Roberts",spec:"Orthopedics",img:"img3.jpg"},
+ {name:"Dr. Olivia Johnson",spec:"Dermatology",img:"img4.jpg"},
+ {name:"Dr. William Smith",spec:"Pediatrics",img:"img5.jpg"},
+ {name:"Dr. Sophia Brown",spec:"Gynecology",img:"img6.jpg"},
+ {name:"Dr. James Davis",spec:"Oncology",img:"img7.jpg"},
+ {name:"Dr. Isabella Martinez",spec:"Psychiatry",img:"img8.jpg"},
+ {name:"Dr. Benjamin Lee",spec:"Radiology",img:"img9.jpg"},
+ {name:"Dr. Mia Taylor",spec:"Gastroenterology",img:"img10.jpg"}
+];
+
+const dc=document.getElementById("dc");
+const td=document.getElementById("td");
+
+function renderDoctors(){
+ td.textContent=doctors.length;
+ dc.innerHTML="";
+ doctors.forEach(d=>{
+  dc.innerHTML+=`
+   <div class="doctor">
+    <img src="${d.img}">
+    <h4>${d.name}</h4>
+    <span>${d.spec}</span>
+   </div>`;
+ });
+}
+
+/* PATIENTS */
+const tp=document.getElementById("tp");
+const pl=document.getElementById("pl");
+
+async function loadPatients(){
+ try{
+  const r=await fetch(`${API}/patients`);
+  const p=await r.json();
+  tp.textContent=p.length;
+  pl.innerHTML=p.map((x,i)=>`
+   <tr>
+    <td>${i+1}</td><td>${x.name||'-'}</td><td>${x.email||'-'}</td>
+    <td>${x.gender||'-'}</td><td>${x.age||'-'}</td>
+    <td>${x.height||'-'}</td><td>${x.weight||'-'}</td>
+   </tr>`).join("");
+  patientTable.style.display="table";
+  patientLoading.style.display="none";
+ }catch{
+  patientLoading.innerHTML='<span class="error">Cannot load patients</span>';
+ }
+}
+
+/* APPOINTMENTS */
+const ta=document.getElementById("ta");
+const al=document.getElementById("al");
+
+async function loadAppointments(){
+ try{
+  const r=await fetch(`${API}/appointments`);
+  const a=await r.json();
+  ta.textContent=a.length;
+  al.innerHTML=a.map((x,i)=>`
+   <tr>
+    <td>${i+1}</td>
+    <td>${x.patient||'-'}</td>
+    <td>${x.doctor||'-'}</td>
+    <td>${x.date||'-'}</td>
+    <td>${x.time||'-'}</td>
+    <td class="${
+      x.status==="Approved"?"status-approved":
+      x.status==="Rejected"?"status-rejected":"status-pending"
+    }">${x.status||'Pending'}</td>
+   </tr>`).join("");
+  appointmentTable.style.display="table";
+  appointmentLoading.style.display="none";
+ }catch{
+  appointmentLoading.innerHTML='<span class="error">Cannot load appointments</span>';
+ }
+}
+
+/* BACK */
+function goBack(){
+ window.history.back();
+}
+
+/* LOAD */
+window.onload=()=>{
+ renderDoctors();
+ loadPatients();
+ loadAppointments();
+};
+</script>
+
+</body>
+</html>
